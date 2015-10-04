@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>{{ title }}</title>
+	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css">
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+	<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/js/bootstrap.min.js"></script>
+	<script type='text/javascript' src="/socket.io/socket.io.js"></script>
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body>
+
+<div class="container-fluid" id="main">
+
+	<div class="row">
+
+		<div class="col-sm-6">
+			<h1>Type your notes here...</h1>
+			<hr>
+			<div class="input-group">
+				<input id="key" type="text" class="form-control" placeholder="something...">
+			</div><hr>
+
+			<!--<button id="finish" type="button" class="btn btn-success">Finish</button>-->
+		</div>
+
+		<div class="col-sm-6 up">
+			<h1>And they'll be completed here...</h1><hr>
+			<div id="notes"></div>
+		</div>
+
+	</div>
+</div>
+
+<script>
+
+socket = io();
+
+var email;
+if (localStorage.getItem("email") != null) {
+	email = localStorage.getItem("email");
+} else {
+	//email = prompt("Email", "");
+	//localStorage.setItem("email", email);
+	window.location = "/newuser";
+}
+//localStorage.removeItem("email");
+socket.emit('get-data', {
+	email: email
+});
+socket.on('data-send', function (data) {
+	for (i=0; i<data.data.Count; i++){
+		$("#notes").append(notesTemp
+			.replace("%key%", decodeURIComponent(data.data.Items[i].key.S))
+			.replace("%value%", decodeURIComponent(data.data.Items[i].value.S)));
+	}
+});
+
+$("#key").focus();
+
+var myID;
+socket.on('initial-connection', function (data) {
+	myID = data.myID;
+});
+
+var notesTemp = "<div class='row'><p><b>%key% - </b>%value%</p><br></div>";
+
+socket.on('sending-notes', function (data) {
+	console.log(data.data);
+	for (i=0; i<data.data.Count; i++){
+		$("#notes").append(notesTemp
+			.replace("%key%", decodeURIComponent(data.data.Items[i].key.S))
+			.replace("%value%", decodeURIComponent(data.data.Items[i].value.S)));
+	}
+});
+
+socket.on('instant-send', function (data) {
+	console.log(data.data);
+	$("#notes").prepend(notesTemp.replace("%key%", data.data.key).replace("%value%", data.data.value));
+});
+
+/*$("#add").click(function() {
+	if ($("#key").val().trim().length > 0) {
+		$.ajax({
+			type: "POST",
+			url: "/save",
+			data: {
+				"action": "action",
+				"key": $("#key").val().trim().replace(/ /g,"_"),
+				"auto": "true",
+				"userID": myID
+			}
+		});
+		$("#key").val("");
+	} else {
+		alert('empty field');
+	}
+});*/
+
+$('#key').on('keyup', function(e) {
+	if (e.which == 13) {
+		e.preventDefault();
+		if ($("#key").val().trim().length > 0) {
+			socket.emit('sendsave', {
+				email: email,
+				userID: myID,
+				key: $("#key").val().trim()
+			});
+
+			$("#key").val("");
+		} else {
+			alert('empty field');
+		}
+	}
+});
+
+/*$("#finish").click(function() {
+	$.ajax({
+		type: "POST",
+		url: "/finish",
+		data: {
+			"userID": myID
+		}
+	});
+}); */
+
+/*
+*/
+
+</script>
+
+</body>
+
+</html>
