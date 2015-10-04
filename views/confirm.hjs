@@ -19,7 +19,8 @@
 	</body>
 
 	<script>
-	localStorage.setItem("email", $("#email"));
+	localStorage.setItem("email", $("#email").text());
+	window.location = "/";
 	</script>
 
 	</html>

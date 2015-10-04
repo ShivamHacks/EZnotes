@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Login</title>
+	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css">
+	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.4.0/css/font-awesome.min.css">
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+	<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/js/bootstrap.min.js"></script>
+	<script type='text/javascript' src="/socket.io/socket.io.js"></script>
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+	<style>
+	html, body, #main {
+		width: 100%:;
+		height: 100%;
+	}
+	#bg {
+		position: fixed;
+		top: 0;
+		left: 0;
+		width: 100%;
+		height: 100%;
+		background-image: url("/images/bg.jpeg");
+		background-repeat: no-repeat;
+		background-attachment: fixed;
+		background-size: cover;
+		-webkit-filter: blur(3px);
+		filter: blur(3px);
+	}
+	.parent {
+		position: relative;
+	}
+	.child {
+		position: absolute;
+		top: 50%;
+		transform: translateY(-50%);
+	}
+	</style>
+</head>
+<body>
+
+	<div id="bg"></div>
+
+	<div class="container-fluid parent" id="main">
+		<div class="row child">
+
+			<div class="col-sm-6">
+				<div class="col-sm-2"></div>
+				<div class="col-sm-8">
+					<h1 class="text-center" style="color:Cornsilk">Login</h1>
+					<form method="post" action='/login' enctype="multipart/form-data" id="new_article">
+						<div class="input-group input-group-lg">
+							<span class="input-group-addon">
+								<i class="fa fa-user"></i>
+							</span>
+							<input type="text" class="form-control" name="email" placeholder="email" required/>
+						</div><br>
+						<div class="input-group input-group-lg">
+							<span class="input-group-addon">
+								<i class="fa fa-lock"></i>
+							</span>
+							<input type="text" class="form-control" name="pswrd" placeholder="password" required/>
+						</div><br>
+						<button type="submit" class="btn btn-lg btn-default pull-right">login</button>
+					</form>
+				</div>
+				<div class="col-sm-2"></div>
+			</div>
+
+			<div class="col-sm-6">
+				<div class="col-sm-2"></div>
+				<div class="col-sm-8">
+					<h1 class="text-center" style="color:Cornsilk">Sign Up</h1>
+					<form method="post" action="/newuser" enctype="multipart/form-data" id="new_article">
+						<div class="input-group input-group-lg">
+							<span class="input-group-addon">
+								<i class="fa fa-user"></i>
+							</span>
+							<input type="text" class="form-control" name="email" placeholder="email" required/>
+						</div><br>
+						<div class="input-group input-group-lg">
+							<span class="input-group-addon">
+								<i class="fa fa-lock"></i>
+							</span>
+							<input type="text" class="form-control" name="pswrd" placeholder="password" required/>
+						</div><br>
+						<button type="submit" class="btn btn-lg btn-default pull-right">sign up</button>
+					</form>
+				</div>
+				<div class="col-sm-2"></div>
+			</div>
+
+		</div>
+
+	</div>
+
+</body>
+</html>

@@ -15,25 +15,17 @@ server.listen(port, function(){
 var bodyParser = require('body-parser'); // needs to go before router
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
-
 var multipart = require('connect-multiparty');
 var multipartMiddleware = multipart();
-
-// router and view engine setup
 var router = express.Router();
 app.use(router);
-
 app.use(express.static(path.join(__dirname, 'public')));
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'hjs');
-
-// other libraries
 var shortid = require('shortid');
 var request = require('request');
-
-// AWS
 var AWS = require('aws-sdk');
-AWS.config.update({accessKeyId: 'AKIAIFWUEXB3WFAAIB4A', secretAccessKey: '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'});
+AWS.config.update({accessKeyId: 'AKIAIBZL5RF2MV6DOQ2A', secretAccessKey: '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'});
 AWS.config.update({region: 'us-east-1'});
 var dynamodb = new AWS.DynamoDB();
 
@@ -134,15 +126,18 @@ io.on('connection', function (socket) {
   });
 });
 
-/* GET home page. */
+/* Routing */
 router.get('/', function(req, res, next) {
-  res.render('index', { title: 'Express' });
+  res.render('index', {});
 });
 
 router.get('/newuser', function(req, res, next) {
-  res.render('newuser', {});
+  res.render('login', {});
 });
 
+router.get('/login', function(req, res, next) {
+  res.render('login', {});
+});
 // REGISTRATION START
 
 // node mailer setup
@@ -193,6 +188,41 @@ router.post('/newuser', multipartMiddleware, function (req, res) {
   });
 
   res.render('checkemail', {});
+});
+
+router.post('/login', multipartMiddleware, function (req, res) {
+  console.log(req.body);
+  console.log('login');
+  var email = req.body.email;
+  var pswrd = req.body.pswrd;
+
+  var paramsFind = {
+    KeyConditions: {
+      email: {
+        ComparisonOperator: 'EQ',
+        AttributeValueList: [
+        {
+          S: email
+        }
+        ]
+      }
+    },
+    TableName: 'EZnotes_users',
+    AttributesToGet: [
+    'email'
+    ]
+  }
+
+  dynamodb.query(paramsFind, function(err, data) {
+    if (err) {
+      console.log(err, err.stack);
+      res.send('error');
+    } else {
+      res.render('confirm', {
+        email: email
+      });
+    }
+  });
 });
 
 router.get('/authentication', function (req, res, next) {

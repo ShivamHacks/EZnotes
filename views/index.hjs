@@ -3,48 +3,66 @@
 <head>
 	<title>{{ title }}</title>
 	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css">
+	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.4.0/css/font-awesome.min.css">
 	<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
 	<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/js/bootstrap.min.js"></script>
 	<script type='text/javascript' src="/socket.io/socket.io.js"></script>
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+	<style>
+	div {
+		text-align: justify;
+		text-justify: inter-word;
+	}
+	</style>
 </head>
 <body>
 
-<div class="container-fluid" id="main">
+	<div class="container-fluid" id="main">
 
-	<div class="row">
+		<div class="row">
+			<div class="col-sm-6" style="position:fixed;left:0;top:0">
+				<h1>Type your notes here...</h1>
+				<hr>
+				<div class="input-group">
+					<span class="input-group-addon"><i class="fa fa-lightbulb-o"></i></span>
+					<input id="key" type="text" class="form-control" placeholder="something...">
+				</div><hr>
 
-		<div class="col-sm-6">
-			<h1>Type your notes here...</h1>
-			<hr>
-			<div class="input-group">
-				<input id="key" type="text" class="form-control" placeholder="something...">
-			</div><hr>
+				<!--<button id="finish" type="button" class="btn btn-success">Finish</button>-->
+			</div>
+			<div class="col-sm-6"></div>
+			<div class="col-sm-6">
+				<div class="col-sm-1"></div>
+				<div class="col-sm-10">
+					<h1>And they'll be completed here...</h1><hr>
+					<div id="notes"></div>
+				</div>
+				<div class="col-sm-1"></div>
+			</div>
 
-			<!--<button id="finish" type="button" class="btn btn-success">Finish</button>-->
 		</div>
 
-		<div class="col-sm-6 up">
-			<h1>And they'll be completed here...</h1><hr>
-			<div id="notes"></div>
-		</div>
-
+		<button id="logout" class="btn btn-lg btn-primary" style="position:fixed;bottom:0;left:0;border-radius:0">Logout</button>
 	</div>
-</div>
 
-<script>
+	<script>
 
-socket = io();
+	socket = io();
 
-var email;
-if (localStorage.getItem("email") != null) {
-	email = localStorage.getItem("email");
-} else {
+	var email;
+	if (localStorage.getItem("email") != null) {
+		email = localStorage.getItem("email");
+	} else {
 	//email = prompt("Email", "");
 	//localStorage.setItem("email", email);
-	window.location = "/newuser";
+	window.location = "/login";
 }
-//localStorage.removeItem("email");
+
+$("#logout").click(function() {
+	localStorage.removeItem("email");
+	window.location = "/";
+});
 socket.emit('get-data', {
 	email: email
 });
