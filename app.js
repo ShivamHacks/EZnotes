@@ -26,7 +26,7 @@ app.set('view engine', 'hjs');
 var shortid = require('shortid');
 var request = require('request');
 var AWS = require('aws-sdk');
-AWS.config.update({accessKeyId: 'AKIAIBZL5RF2MV6DOQ2A', secretAccessKey: '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'});
+AWS.config.update({accessKeyId: 'secret', secretAccessKey: 'secret'});
 AWS.config.update({region: 'us-east-1'});
 var dynamodb = new AWS.DynamoDB();
 
