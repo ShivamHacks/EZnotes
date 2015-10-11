@@ -6,7 +6,7 @@ var app = express();
 
 // server
 var server = require('http').Server(app);
-var port = '3000';
+var port = normalizePort(process.env.PORT || '3000');
 app.set('port', port);
 server.listen(port, function(){
   console.log('listening on: ' + this.address().port);
@@ -26,8 +26,7 @@ app.set('view engine', 'hjs');
 var shortid = require('shortid');
 var request = require('request');
 var AWS = require('aws-sdk');
-AWS.config.update({accessKeyId: 'secret', secretAccessKey: 'secret'});
-AWS.config.update({region: 'us-east-1'});
+AWS.config.loadFromPath('./config.json');
 var dynamodb = new AWS.DynamoDB();
 
 var paramsTemp = function(data) {
@@ -540,5 +539,11 @@ app.use(function(err, req, res, next) {
   });
 });
 
+function normalizePort(val) {
+  var port = parseInt(val, 10);
+  if (isNaN(port)) { return val; }
+  if (port >= 0) { return port; }
+  return false;
+}
 
 module.exports = app;
