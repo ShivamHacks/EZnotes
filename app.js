@@ -163,7 +163,7 @@ router.post('/newuser', multipartMiddleware, function (req, res) {
     from: "Hello <helloworldtestingemail@gmail.com>",
     to: email,
     subject: "Confirm your account",
-    html: "<p>Confirm your account <a href='http://localhost:3000/authentication?email=" + email + "&token=" + token + "'>here</a></p>"
+    html: "<p>Confirm your account <a href='https://eznotes.herokuapp.com/authentication?email=" + email + "&token=" + token + "'>here</a></p>"
   }, function(error, response){
     if(error){
       console.log(error);
