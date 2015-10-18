@@ -2,100 +2,139 @@
 <html>
 <head>
 	<title>{{ title }}</title>
-	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css">
-	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.4.0/css/font-awesome.min.css">
 	<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
-	<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/js/bootstrap.min.js"></script>
 	<script type='text/javascript' src="/socket.io/socket.io.js"></script>
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 	<style>
-	div {
-		text-align: justify;
-		text-justify: inter-word;
+	html, body {
+		margin: 0;
+		padding: 0;
+		width: 100%;
+		height: 100%;
+		background: #eeeded;
+		
 	}
+	textarea {
+		width: 96%;
+		height: 100%;
+		padding: 0 2%;
+		font-family:'Times New Roman';
+		font-size: 100%;
+		text-align: justify;
+		outline: none;
+		border:none;
+		background: #fff;
+		resize:none;
+	}
+	.notes {
+		margin: 2% 20%;
+		padding: 3% 2%;
+		width: 56%;
+		height: 82%;
+		background: #fff;
+		box-shadow: 0 3px 6px rgba(0,0,0,0.16), 0 3px 6px rgba(0,0,0,0.23);
+		display: inline-block;
+	}
+	@media only screen and (orientation: portrait) {
+		.notes {
+			margin: 5%;
+			width: 86%;
+			height: 90%;
+		}
+	}
+
 	</style>
 </head>
 <body>
-
-	<div class="container-fluid" id="main">
-
-		<div class="row">
-			<div class="col-sm-6" style="position:fixed;left:0;top:0">
-				<h1>Type your notes here...</h1>
-				<hr>
-				<div class="input-group">
-					<span class="input-group-addon"><i class="fa fa-lightbulb-o"></i></span>
-					<input id="key" type="text" class="form-control" placeholder="something...">
-				</div><hr>
-
-				<!--<button id="finish" type="button" class="btn btn-success">Finish</button>-->
-			</div>
-			<div class="col-sm-6"></div>
-			<div class="col-sm-6">
-				<div class="col-sm-1"></div>
-				<div class="col-sm-10">
-					<h1>And they'll be completed here...</h1><hr>
-					<div id="notes"></div>
-				</div>
-				<div class="col-sm-1"></div>
-			</div>
-
-		</div>
-
-		<button id="logout" class="btn btn-lg btn-primary" style="position:fixed;bottom:0;left:0;border-radius:0">Logout</button>
+	<div class="notes">
+		<textarea id="key"></textarea>
 	</div>
 
-	<script>
 
+
+	<button id="logout" class="btn btn-lg btn-primary" style="position:fixed;bottom:0;left:0;border-radius:0;margin:0">Logout</button>
+
+
+	<script>
 	socket = io();
+	$("#key").val('');
+	$("#key").focus();
 
 	var email;
 	if (localStorage.getItem("email") != null) {
 		email = localStorage.getItem("email");
 	} else {
-	//email = prompt("Email", "");
-	//localStorage.setItem("email", email);
-	window.location = "/login";
-}
-
-$("#logout").click(function() {
-	localStorage.removeItem("email");
-	window.location = "/";
-});
-socket.emit('get-data', {
-	email: email
-});
-socket.on('data-send', function (data) {
-	for (i=0; i<data.data.Count; i++){
-		$("#notes").append(notesTemp
-			.replace("%key%", decodeURIComponent(data.data.Items[i].key.S))
-			.replace("%value%", decodeURIComponent(data.data.Items[i].value.S)));
+		window.location = "/login";
 	}
-});
 
-$("#key").focus();
+	$("#logout").click(function() {
+		localStorage.removeItem("email");
+		window.location = "/";
+	});
 
-var myID;
-socket.on('initial-connection', function (data) {
-	myID = data.myID;
-});
+	var myID;
+	socket.on('initial-connection', function (data) {
+		myID = data.myID;
+	});
 
-var notesTemp = "<div class='row'><p><b>%key% - </b>%value%</p><br></div>";
+	socket.emit('get-data', {
+		email: email
+	});
 
-socket.on('sending-notes', function (data) {
-	console.log(data.data);
-	for (i=0; i<data.data.Count; i++){
-		$("#notes").append(notesTemp
-			.replace("%key%", decodeURIComponent(data.data.Items[i].key.S))
-			.replace("%value%", decodeURIComponent(data.data.Items[i].value.S)));
-	}
-});
+	socket.on('data-send', function (data) {
+		$("#key").val($("#key").val() + data.key + ' - ' + data.value.replace(/\n/g, ' ') + '\n\n');
+	});
 
-socket.on('instant-send', function (data) {
-	console.log(data.data);
-	$("#notes").prepend(notesTemp.replace("%key%", data.data.key).replace("%value%", data.data.value));
-});
+	socket.on('instant-send', function (data) {
+		var lines = $('#key').val().split(/\n/);
+		console.log(lines.length);
+		lines[lines.length-2] = data.data.key + " - " + data.data.value.replace(/\n/g, ' ') + '\n';
+		$("#key").val(lines.join('\n'));
+		$('#key').scrollTop($('#key')[0].scrollHeight);
+	});
+
+	$('#key').on('keyup', function(e) {
+		if (e.which == 13) {
+			e.preventDefault();
+			var lines = $('#key').val().split(/\n/);
+			var keySend = lines[lines.length-2];
+			if ($("#key").val().trim().length > 0) {
+				socket.emit('sendsave', {
+					email: email,
+					userID: myID,
+					key: keySend
+				});
+			} else {
+				alert('empty field');
+			}
+		}
+	});
+
+	</script>
+
+</body>
+
+</html>
+
+
+
+
+
+
+
+<script>
+
+/*$("#finish").click(function() {
+	$.ajax({
+		type: "POST",
+		url: "/finish",
+		data: {
+			"userID": myID
+		}
+	});
+}); */
+
 
 /*$("#add").click(function() {
 	if ($("#key").val().trim().length > 0) {
@@ -115,38 +154,87 @@ socket.on('instant-send', function (data) {
 	}
 });*/
 
-$('#key').on('keyup', function(e) {
-	if (e.which == 13) {
-		e.preventDefault();
-		if ($("#key").val().trim().length > 0) {
-			socket.emit('sendsave', {
-				email: email,
-				userID: myID,
-				key: $("#key").val().trim()
-			});
+//<!--<button id="finish" type="button" class="btn btn-success">Finish</button>-->
+/*
+			
+			<!--<div class="col-sm-6"></div>
+			<div class="col-sm-6">
+				<div class="col-sm-1"></div>
+				<div class="col-sm-10">
+					<h1>And they'll be completed here...</h1><hr>
+					<div id="notes"></div>
+				</div>
+				<div class="col-sm-1"></div>
+			</div>-->
 
-			$("#key").val("");
-		} else {
-			alert('empty field');
-		}
+				div {
+		text-align: justify;
+		text-justify: inter-word;
+	}
+
+
+	<!-- http://jsfiddle.net/XNnHC/3/ for sliding menu -->
+	*/
+
+//email = prompt("Email", "");
+	//localStorage.setItem("email", email);
+
+
+	//var val = $("#key").val();
+	//var breaker = val.split('\n');
+
+	// (var i in breaker) {
+	//////	breaker[i] = breaker[i].replace('\n', '');
+	//}
+
+	//$("#key").val(	breaker[nLine.]		);
+
+//var index = 0;
+
+//console.log('chicken');
+/*
+$("#notes").append(notesTemp
+		.replace("%key%", decodeURIComponent(data.key))
+		.replace("%value%", decodeURIComponent(data.value)));
+
+
+var notesTemp = "<div class='row'><p><b>%key% - </b>%value%</p><br></div>";
+
+socket.on('sending-notes', function (data) {
+	//console.log(data.data);
+	for (i=0; i<data.data.Count; i++){
+		$("#notes").append(notesTemp
+			.replace("%key%", decodeURIComponent(data.data.Items[i].key.S))
+			.replace("%value%", decodeURIComponent(data.data.Items[i].value.S)));
 	}
 });
-
-/*$("#finish").click(function() {
-	$.ajax({
-		type: "POST",
-		url: "/finish",
-		data: {
-			"userID": myID
-		}
-	});
-}); */
+*/
 
 /*
 */
+//console.log(encodeURIComponent($("#key").val()));
 
-</script>
+	/*	var val = $("#key").val();
+		var breaker = val.split('\n');
 
-</body>
+		for (var i in breaker) {
+			breaker[i] = breaker[i].replace('\n', '');
+		}
+		console.log(breaker);
 
-</html>
+		//console.log(breaker);
+		var previous = breaker[breaker.length-2].length;
+		console.log( $("#key").val().substring(0, $("#key").val().length-previous-1) );
+		//console.log($("#key").val().substring(secondln, $("#key").val().length));
+		//console.log(val.substring(secondln, val.length));
+		//index++;*/
+
+		//$("#key").val( encodeURIComponent($("#key").val()).substring(0, 2) );
+			//console.log(data.data);
+	//$("#notes").prepend(notesTemp.replace("%key%", data.data.key).replace("%value%", data.data.value));
+	//$("#key").val("");
+
+	/*<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/js/bootstrap.min.js">//
+		<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css">
+		<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.4.0/css/font-awesome.min.css">*/
+		</script>

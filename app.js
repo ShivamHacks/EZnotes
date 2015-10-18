@@ -29,23 +29,27 @@ var AWS = require('aws-sdk');
 AWS.config.loadFromPath('./config.json');
 var dynamodb = new AWS.DynamoDB();
 
-var paramsTemp = function(data) {
+var paramsTemp = function(key, email) {
   return {
     Item: {
-      email: { S: data.email },
+      email: { S: email },
       id: { S: shortid.generate() },
-      key: { S: data.key },
-      value: { S: data.value }
+      key: { S: key }
     },
     TableName: 'EZnotes'
   };
-}
+};
 
 // sockets
 var io = require('socket.io')(server);
 var userIDs = [];
 var allClients = [];
+var emails = [];
+var url = 'https://en.wikipedia.org/w/api.php?format=json&action=query&prop=extracts&exintro=&explaintext=&titles=key';
+
 io.on('connection', function (socket) {
+
+
   allClients.push(socket);
   userIDs.push(socket.id);
   console.log('user connect ' + socket.id);
@@ -57,74 +61,115 @@ io.on('connection', function (socket) {
     console.log('user disconnect ' + userIDs[disconnectedIndex]);
     userIDs.splice(disconnectedIndex, 1);
     allClients.splice(disconnectedIndex, 1);
+    emails.splice(disconnectedIndex, 1);
   });
 
-  socket.on('get-data', function (data) {
-    var email = data.email;
-    var paramsFind = {
-      KeyConditions: {
-        email: {
-          ComparisonOperator: 'EQ',
-          AttributeValueList: [
-          {
-            S: email
-          }
-          ]
+
+// When user loads page, send current notes
+socket.on('get-data', function (data) {
+  var email = data.email;
+  emails.push(email);
+  var paramsFind = {
+    KeyConditions: {
+      email: {
+        ComparisonOperator: 'EQ',
+        AttributeValueList: [
+        {
+          S: email
         }
-      },
-      TableName: 'EZnotes',
-      AttributesToGet: [
-      'key',
-      'value'
-      ]
+        ]
+      }
+    },
+    TableName: 'EZnotes',
+    AttributesToGet: [
+    'key'
+    ]
+  }
+  dynamodb.query(paramsFind, function(err, data) {
+    if (err) {
+      console.log(err, err.stack);
+    } else {
+      if (data != null) {
+        for (var i in data.Items) {
+          var loc = url.replace('key', data.Items[i].key.S.replace(/ /g,"_"));
+          request({
+            url: loc,
+            json: true
+          }, function (error, response, body) {
+            var key;
+            var value;
+            if (!error && response.statusCode == 200) {
+              for (var j in body.query.pages) {
+                key = body.query.pages[j].title;
+                value = body.query.pages[j].extract;
+              }
+              if (value == null) {
+                value = 'nothing found...';
+              }
+            } else {
+              value = 'error';
+            }
+            socket.emit("data-send", {
+              key: key,
+              value: value
+            });
+          });
+        }
+      }
     }
-    dynamodb.query(paramsFind, function(err, data) {
+  });
+});
+
+
+// When user submits text to save data
+socket.on('sendsave', function (data) {
+  var key = data.key;
+  console.log(key);
+  var loc = url.replace('key', key.replace(/ /g,"_"));
+  request({
+    url: loc,
+    json: true
+  }, function (error, response, body) {
+    var value;
+    if (!error && response.statusCode == 200) {
+      // need to fix issue, if body.query.pages DNE
+      for (var i in body.query.pages) {
+        value = body.query.pages[i].extract;
+      }
+      if (value == null) {
+        value = 'nothing found...';
+      }
+    } else {
+      value = 'error';
+    }
+    var email = emails[allClients.indexOf(socket)];
+    console.log(allClients.indexOf(socket));
+    var params = paramsTemp(key, email);
+    dynamodb.putItem(params, function(err, data) {
       if (err) {
         console.log(err, err.stack);
+        socket.emit("instant-send", {
+          data: {
+            key: key,
+            value: 'error'
+          }
+        });
       } else {
-        socket.emit("data-send", {
-          data: data
+        socket.emit("instant-send", {
+          data: {
+            key: key,
+            value: value
+          }
         });
       }
     });
   });
-
-  socket.on('sendsave', function (data) {
-    console.log(data);
-    var url = 'https://en.wikipedia.org/w/api.php?format=json&action=query&prop=extracts&exintro=&explaintext=&titles=' + data.key.replace(/ /g,"_");
-    var value = 'nothing found...';
-
-    request({
-      url: url,
-      json: true
-    }, function (error, response, body) {
-      for (var key in body.query.pages) {
-        value = body.query.pages[key].extract;
-      }
-
-      socket.emit("instant-send", {
-        data: {
-          key: data.key,
-          value: value
-        }
-      });
-
-      var params = paramsTemp({
-        email: data.email,
-        key: encodeURIComponent(data.key),
-        value: value
-      });
-
-      dynamodb.putItem(params, function(err, data) {
-        if (err) {
-          console.log(err, err.stack);
-        } else {
-        }
-      }); 
-
-    });
-  });
 });
+
+
+});
+
+
 
 /* Routing */
 router.get('/', function(req, res, next) {
@@ -287,225 +332,6 @@ router.get('/authentication', function (req, res, next) {
 });
 
 // REGISTRATION END
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-/*var fs = require('fs');
-var request = require('request');
-
-var url = "https://en.wikipedia.org/w/api.php?action=query&format=json&list=allpages&aplimit=500&apfrom=NUM";
-var current = 0;
-var articles = [];
-while(current < 10) {
-  var offset = current * 500;
-  console.log(offset);
-  request({
-    url: url.replace("NUM", offset),
-    json: true
-  }, function (error, response, body) {
-    //console.log(body.query.allpages);
-    if (!error && response.statusCode === 200) {
-      try {
-        //console.log(body.query.allpages[0]);
-        for (i=0; i<body.query.allpages.length; i++) {
-          //console.log(body.query.allpages[i]);
-          articles.push("hi");
-          //console.log(body.query.allpages[i].title);
-        }
-      }
-      catch (e) {
-
-      }
-      finally {
-
-      }
-    }
-  });
-  current++;
-}
-console.log(articles);
-fs.writeFile('./wikiTable.json', JSON.stringify(articles), 'utf8', function() {
-  console.log('successful article save');
-}); */
-
-
-
-
-
-
-
-
-/*
-var url = 'https://en.wikipedia.org/w/api.php?format=json&action=query&prop=extracts&exintro=&explaintext=&titles=George_Washington';
-
-for (i=0; i < 10; i++) {
-  request({
-    url: url,
-    json: true
-  }, function (error, response, body) {
-      //console.log(error);
-      console.log(response.statusCode);
-      for (var key in body.query.pages) {
-        console.log(body.query.pages[key].title);
-      }
-    });
-}
-
-*/
-
-/*
-
-router.post('/save', function (req, res) {
-  //console.log(req.body);
-  var params;
-  if (req.body.auto == 'true') {
-    var url = 'https://en.wikipedia.org/w/api.php?format=json&action=query&prop=extracts&exintro=&explaintext=&titles=' + req.body.key;
-    // still need to fix if pages doesn't exist
-
-    // see more
-    // get a bunch of domains
-    request({
-      url: url,
-      json: true
-    }, function (error, response, body) {
-      console.log(body);
-      if (!error && response.statusCode === 200) {
-        var value = "nothing found...";
-        try {
-          for (var key in body.query.pages) {
-            if (body.query.pages[key].extract != "") {
-              value = body.query.pages[key].extract;
-            } else {
-              value = "nothing found...";
-            }
-          }
-        }
-        catch (e) {
-          console.log(e);
-          value = "nothing found...";
-        }
-        finally {
-          params = paramsTemp({
-            id: shortid.generate(),
-            email: req.body.email,
-            action: req.body.action,
-            key: encodeURIComponent(req.body.key),
-            value: encodeURIComponent(value)
-          });
-    console.log('before', req.body.userID);
-    allClients[userIDs.indexOf(req.body.userID)].emit("instant-send", {
-      data: {
-        key: req.body.key.replace(/_/g," "),
-        value: value
-      }
-    });
-
-    console.log('after');
-  }
-
-} else {
-  console.log(error, response.statusCode);
-}
-
-});
-}
-}); */
-
-          /*
-          dynamodb.putItem(params, function(err, data) {
-            if (err) {
-              console.log(err, err.stack);
-            } else {
-              console.log('sending');
-              allClients[userIDs.indexOf(req.body.userID)].emit("instant-send", {
-                data: {
-                  key: req.body.key.replace(/_/g," "),
-                  value: value
-                }
-              });
-              console.log('sent');
-            }
-          }); 
-*/
-
-/*
-
-router.post('/finish', function (req, res) {
-  var params = {
-    KeyConditions: {
-      email: {
-        ComparisonOperator: 'EQ',
-        AttributeValueList: [
-        {
-          S: req.body.email
-        }
-        ]
-      }
-    },
-    TableName: 'EZnotes',
-    AttributesToGet: [
-    'key',
-    'value'
-    ]
-  }
-  dynamodb.query(params, function(err, data) {
-    if (err) {
-      console.log(err, err.stack);
-    } else {
-      console.log('sending out to: ' + req.body.userID);
-      allClients[userIDs.indexOf(req.body.userID)].emit("sending-notes", {
-        data: data
-      });
-      console.log('sent');
-    }
-  });
-});
-
-*/
-
-
-
-
-
-
-
-
-
-
-
-
-//var cookieParser = require('cookie-parser');
-//app.use(cookieParser());
-
-//var multipart = require('connect-multiparty');
-//var multipartMiddleware = multipart();
 
 
 // catch 404 and forward to error handler
